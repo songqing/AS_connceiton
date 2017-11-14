@@ -33,7 +33,7 @@ struct AsIps
 	bool operator==(const AsIps &a) const
 	{
 		return a.i1 == this->i1 && a.i2 == this->i2 &&
-		   	a.i3 == this->i3 && a.i4 == this->i4;
+		   	a.i3 == this->i3;
 	}
 };
 bool compareAsIps(const AsIps &a1, const AsIps &a2)
@@ -54,6 +54,18 @@ struct AsInfo
 	vector<AsIps> vasIps;
 };
 
+string tostringip(int i1, int i2, int i3, int i4)
+{
+	stringstream ss;
+	string s;
+	ss << i1 << "." <<i2 << "." << i3 << "." << i4;
+	ss >> s;
+	return s;
+}
+string tostringip(const AsIps& a)
+{
+	return tostringip(a.i1, a.i2, a.i3, a.i4);
+}
 
 vector<AsConn> vasconn; //500 as connection
 vector<AsInfo> vAsInfo;  //store 500 as' info(as num and ips) 
@@ -140,8 +152,6 @@ int main()
 	for(const auto& a: vasconn)
 	{
 
-cout<<"used ips" <<susedips.size()<<endl;  //used ips for nei
-cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 		if(susedasnum.find(a.as) == susedasnum.end())
 		{
 			int if_realconn=0;
@@ -177,47 +187,83 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 						if(au == an)
 						{
 							if_realconn = 1;
-							stringstream ssu, ssn;
-							string su, sn;
-							int istart = rand() % 150;
-							ssu << au.i1 << "." <<au.i2 <<
-								"." << au.i3 << "." << istart;
-							ssu >> su;
-							while(susedips.find(su) != susedips.end())
+							if(au.i4 != 0)  // already exist, before inserted 
 							{
-								istart = rand() % 150;
-								ssu.str("");
-								ssu.clear();
-								ssu << au.i1<<"."<<au.i2<<"."<<
-									au.i3<<"."<<istart;
-								ssu >> su;
-								cout<<"su 195:"<<su<<endl;
-							}
-							susedips.insert(su);
+								neighbor["neighbor_ip"] = tostringip(an);
+								neighbor["ebgp_multihop"] = 5;
+								neighbor["remote_as"] = a.asneighbor;
+								neighbor["update_source"] = tostringip(au);
+								neighbors.append(neighbor);
 
-							istart = rand() % 150;
-							ssn << an.i1 << "." << an.i2 << "." << an.i3 <<
-								"."<<istart;
-							ssn >> sn;
-							while(susedips.find(sn) != susedips.end())
+								item["neighbors"] = neighbors;
+							}
+							else
 							{
-								istart = rand() % 150;
-								ssn.str("");
-								ssn.clear();
-								ssn << an.i1<<"."<<an.i2<<"."<<
-									an.i3<<"."<<istart;
-								ssn >> sn;
-								cout<<"211 sn:"<<sn<<endl;
+								int istartu = rand() % 150;
+								int istartn = rand() % 150;
+								string su = 
+									tostringip(au.i1, au.i2, au.i3, istartu);
+								while(susedips.find(su) != susedips.end())
+								{
+									istartu = rand() % 150;
+									su = 
+										tostringip(au.i1, au.i2, au.i3, istartu);
+								}
+								susedips.insert(su);
+
+								istartn = rand() % 150;
+								string sn = 
+									tostringip(an.i1, an.i2, an.i3, istartn);
+								while(susedips.find(sn) != susedips.end())
+								{
+									istartn = rand() % 150;
+									sn = tostringip(an.i1, 
+											an.i2, an.i3, istartn);
+								}
+								susedips.insert(sn);
+
+								neighbor["neighbor_ip"] = sn;
+								neighbor["ebgp_multihop"] = 5;
+								neighbor["remote_as"] = a.asneighbor;
+								neighbor["update_source"] = su;
+								neighbors.append(neighbor);
+
+								item["neighbors"] = neighbors;
+
+								//update neighbor and update ip of the two as
+								for(auto& aas: vAsInfo)
+								{
+									if(aas.asnom == a.as)
+									{
+										for(int ii =0;
+												ii < aas.vasIps.size(); ++ii)
+										{
+											if (aas.vasIps[ii] == au)
+											{
+												aas.vasIps[ii].i4 = istartu;
+												break;
+											}
+										}
+										break;
+									}
+								}	
+								for(auto& aasn: vAsInfo)
+								{
+									if(aasn.asnom == a.asneighbor)
+									{
+										for(int ii =0;
+												ii < aasn.vasIps.size(); ++ii)
+										{
+											if (aasn.vasIps[ii] == an)
+											{
+												aasn.vasIps[ii].i4 = istartn;
+												break;
+											}
+										}
+										break;
+									}
+								}	
 							}
-							susedips.insert(sn);
-
-							neighbor["neighbor_ip"] = sn;
-							neighbor["ebgp_multihop"] = 5;
-							neighbor["remote_as"] = a.asneighbor;
-							neighbor["update_source"] = su;
-							neighbors.append(neighbor);
-
-							item["neighbors"] = neighbors;
 						}
 						if(if_realconn)break;
 					}
@@ -229,37 +275,23 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 			{
 				AsIps au, an, aorign;
 				au = an = aorign = *(sotherips.begin());
-				stringstream ssu, ssn;
+				int istartu = rand() % 150;
+				int istartn = rand() % 150;
 				string su, sn;
-				int istart = rand() % 150;
-				ssu << au.i1 << "." <<au.i2 <<
-					"." << au.i3 << "." << istart;
-				ssu >> su;
+				su = tostringip(au.i1, au.i2, au.i3, istartu);
 				while(susedips.find(su) != susedips.end())
 				{
-					istart = rand() % 150;
-					ssu.str("");
-					ssu.clear();
-					ssu << au.i1<<"."<<au.i2<<"."<<
-						au.i3<<"."<<istart;
-					ssu >> su;
-					cout<<"247 su"<<su<<endl;
+					istartu = rand() % 150;
+					su = tostringip(au.i1, au.i2, au.i3, istartu);
 				}
 				susedips.insert(su);
 
-				istart = rand() % 150;
-				ssn << an.i1 << "." << an.i2 << "." << an.i3 <<
-					"."<<istart;
-				ssn >> sn;
+				istartn = rand() % 150;
+				sn = tostringip(an.i1, an.i2, an.i3, istartn);
 				while(susedips.find(sn) != susedips.end())
 				{
-					istart = rand() % 150;
-					ssn.str("");
-					ssn.clear();
-					ssn << an.i1<<"."<<an.i2<<"."<<
-						an.i3<<"."<<istart;
-					ssn >> sn;
-					cout<<"263 sn"<<sn<<endl;
+					istartn = rand() % 150;
+					sn = tostringip(an.i1, an.i2, an.i3, istartn);
 				}
 				susedips.insert(sn);
 
@@ -277,7 +309,7 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 				{
 					if(vAsInfo[i].asnom == a.asneighbor)
 					{
-						AsIps asips1(an.i1, an.i2, an.i3, 0);
+						AsIps asips1(an.i1, an.i2, an.i3, istartn);
 						vAsInfo[i].vasIps.push_back(asips1);
 						break;
 					}	
@@ -286,7 +318,7 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 				{
 					if(vAsInfo[i].asnom == a.as)
 					{
-						AsIps asips1(au.i1, au.i2, au.i3, 0);
+						AsIps asips1(au.i1, au.i2, au.i3, istartu);
 						vAsInfo[i].vasIps.push_back(asips1);
 						break;
 					}	
@@ -299,7 +331,7 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 			ss >> sas;
 			item["server_name"] = string("route_") + sas;
 			item["server_id"] = "";
-			item["iamge"] = "0bfed3a7-a19a-4bb9-949e-d2eee0108d81";
+			item["image"] = "0bfed3a7-a19a-4bb9-949e-d2eee0108d81";
 			item["zone"] = "nova";
 			item["type"] = "drt";
 			item["flavorref"] = "10";
@@ -323,7 +355,9 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 			ss_cidr >> cidr_network;
 			networks["cidr"] = cidr_network;
 			networks["ip"] = ip_network;
-			item["networks"] = networks;
+
+			item["networks"].append(networks);
+			//item["networks"] = networks;
 			sotherips.erase(asipstemp);
 
 			server.append(item);  // added to json
@@ -373,46 +407,89 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 								if(au == an)
 								{
 									if_realconn=1;
-									stringstream ssu,ssn;
-									string su, sn;
-									int istart = rand() % 150;
-									ssu << au.i1<<"."<<au.i2<<"."<<
-										au.i3<<"."<<istart;
-									ssu >> su;
-									while(susedips.find(su)!=susedips.end())
+									//already exist, before inserted 
+									if(au.i4 != 0) 
 									{
-										istart = rand() % 150;
-										ssu.str("");
-										ssu.clear();
-										ssu << au.i1<<"."<<au.i2<<"."<<
-											au.i3<<"."<<istart;
-										ssu >> su;
-										cout<<"397 su:"<<su<<endl;
-									}
-									susedips.insert(su);
+										cout << 
+											" 418 wwwwwwwwwwwwwwwwwwrong!!!"
+											<<endl;
+										neighbor["neighbor_ip"] = tostringip(an);
+										neighbor["ebgp_multihop"] = 5;
+										neighbor["remote_as"] = a.asneighbor;
+										neighbor["update_source"] = 
+											tostringip(au);
 
-									istart = rand() % 150;
-									ssn << an.i1<<"."<<an.i2<<"."<<an.i3<<
-										"."<<istart;
-									ssn >> sn;
-									while(susedips.find(sn)!=susedips.end())
+										server[i]["neighbors"].append(neighbor);
+									}
+									else
 									{
-										istart = rand() % 150;
-										ssn.str("");
-										ssn.clear();
-										ssn << an.i1<<"."<<an.i2<<"."<<
-											an.i3<<"."<<istart;
-										ssn >> sn;
-										cout<<"407 sn:"<<sn<<endl;
+										string su, sn;
+										int istartu = rand() % 150;
+										int istartn = rand() % 150;
+										su = tostringip(au.i1, 
+												au.i2, au.i3, istartu);
+										while(susedips.find(su)!=susedips.end())
+										{
+											istartu = rand() % 150;
+											su = tostringip(au.i1, 
+													au.i2, au.i3, istartu);
+										}
+										susedips.insert(su);
+
+										istartn = rand() % 150;
+										sn = tostringip(an.i1, 
+												an.i2, an.i3, istartn);
+										while(susedips.find(sn)!=susedips.end())
+										{
+											istartn = rand() % 150;
+											sn = tostringip(an.i1, 
+													an.i2, an.i3, istartn);
+										}
+										susedips.insert(sn);
+
+										neighbor["neighbor_ip"] = sn;
+										neighbor["ebgp_multihop"] = 5;
+										neighbor["remote_as"] = a.asneighbor;
+										neighbor["update_source"] = su;
+
+										server[i]["neighbors"].append(neighbor);
+										for(auto& aas: vAsInfo)
+										{
+											if(aas.asnom == a.as)
+											{
+												for(int ii =0;
+														ii < aas.vasIps.size(); 
+														++ii)
+												{
+													if (aas.vasIps[ii] == au)
+													{
+														aas.vasIps[ii].i4 = 
+															istartu;
+														break;
+													}
+												}
+												break;
+											}
+										}	
+										for(auto& aasn: vAsInfo)
+										{
+											if(aasn.asnom == a.asneighbor)
+											{
+												for(int ii =0;
+														ii < aasn.vasIps.size();
+													   	++ii)
+												{
+													if (aasn.vasIps[ii] == an)
+													{
+														aasn.vasIps[ii].i4 = 
+															istartn;
+														break;
+													}
+												}
+												break;
+											}
+										}	
 									}
-									susedips.insert(sn);
-
-									neighbor["neighbor_ip"] = sn;
-									neighbor["ebgp_multihop"] = 5;
-									neighbor["remote_as"] = a.asneighbor;
-									neighbor["update_source"] = su;
-
-									server[i]["neighbors"].append(neighbor);
 								}
 								if(if_realconn)break;
 							}
@@ -424,37 +501,23 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 					{
 						AsIps au, an, aorign;
 						au = an = aorign = *(sotherips.begin());
-						stringstream ssu, ssn;
 						string su, sn;
-						int istart = rand() % 150;
-						ssu << au.i1 << "." <<au.i2 <<
-							"." << au.i3 << "." << istart;
-						ssu >> su;
+						int istartu = rand() % 150;
+						int istartn = rand() % 150;
+						su = tostringip(au.i1, au.i2, au.i3, istartu);
 						while(susedips.find(su) != susedips.end())
 						{
-							istart = rand() % 150;
-							ssu.str("");
-							ssu.clear();
-							ssu << au.i1<<"."<<au.i2<<"."<<
-								au.i3<<"."<<istart;
-							ssu >> su;
-							cout<<"442 su:"<<su<<endl;
+							istartu = rand() % 150;
+							su = tostringip(au.i1, au.i2, au.i3, istartu);
 						}
 						susedips.insert(su);
 
-						istart = rand() % 150;
-						ssn << an.i1 << "." << an.i2 << "." << an.i3 <<
-							"."<<istart;
-						ssn >> sn;
+						istartn = rand() % 150;
+						sn = tostringip(an.i1, an.i2, an.i3, istartn);
 						while(susedips.find(sn) != susedips.end())
 						{
-							istart = rand() % 150;
-							cout<<"istart 454: "<<istart<<endl;
-							ssn.str("");
-							ssn.clear();
-							ssn << an.i1<<"."<<an.i2<<"."<< an.i3<<"."<<istart;
-							ssn >> sn;
-							cout<<"458 sn:"<<sn<<endl;
+							istartn = rand() % 150;
+							sn = tostringip(an.i1, an.i2, an.i3, istartn);
 						}
 						susedips.insert(sn);
 
@@ -473,7 +536,7 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 						{
 							if(vAsInfo[i1].asnom == a.asneighbor)
 							{
-								AsIps asips1(an.i1, an.i2, an.i3, 0);
+								AsIps asips1(an.i1, an.i2, an.i3, istartn);
 								vAsInfo[i1].vasIps.push_back(asips1);
 								break;
 							}	
@@ -482,7 +545,7 @@ cout<<"used as num;"<< susedasnum.size()<<endl;  //num of used as in json
 						{
 							if(vAsInfo[i2].asnom == a.as)
 							{
-								AsIps asips1(au.i1, au.i2, au.i3, 0);
+								AsIps asips1(au.i1, au.i2, au.i3, istartu);
 								vAsInfo[i2].vasIps.push_back(asips1);
 								break;
 							}	
