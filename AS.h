@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <sstream>
 
+#include "json/json.h"
 
 //store as connection, example:
 //as1 as2
@@ -82,11 +83,25 @@ void init_other_ips(const std::string &filename,
 		std::set<AsIps> &sotherips);
 
 //get a as's ips
-void get_as_ips(int asnum, std::vector<AsIps> & vo, 
+void get_as_ips(const int asnum, std::vector<AsIps> & vo, 
 		const std::vector<AsInfo> & vi);
 //generate neighbor ip
 void generate_neighbor_ip(std::string &s, const std::set<std::string> &sa,
 	   const AsIps &a, int &i4);
+//insert a as ip when they are connected but have no matching ips
+void insert_as_ip(const int asnum, std::vector<AsInfo> & va, 
+		const AsIps & a, const int v);
+//set json neighbor
+void set_json_neighbor(Json::Value &neighbor, const std::string & ni,
+		const int ebgp, const int ras, const std::string &us);
+//set basic json info
+void set_basic_json(Json::Value &item, const int asnum, std::set<AsIps> &s);
+//from the two vectors of ip to set json neighbor
+void set_json_neighbor_from_two_as(const std::vector<AsIps> &updata_source,
+	   const std::vector<AsIps> &vneighbor_ip, Json::Value &neighbor, 
+	   Json::Value &neighbors, Json::Value &item,
+	   const AsConn &a, int &if_realconn,
+	   std::set<std::string> &susedips, std::vector<AsInfo> &vAsInfo);
 //output json
 void output_json(const std::string &filename,
 		const std::set<AsConn> &sasconn,

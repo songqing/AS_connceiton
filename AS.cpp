@@ -111,7 +111,7 @@ void init_other_ips(const std::string &filename,
 }
 
 //get a as's ips
-void get_as_ips(int asnum, vector<AsIps> & vo, const vector<AsInfo> & vi)
+void get_as_ips(const int asnum, vector<AsIps> & vo, const vector<AsInfo> & vi)
 {
 	for(const auto& a: vi)
 	{
@@ -125,7 +125,7 @@ void get_as_ips(int asnum, vector<AsIps> & vo, const vector<AsInfo> & vi)
 }
 
 //update a as's ip (the 4th num)
-void update_as_ip(int asnum, vector<AsInfo> & a, const AsIps & ai, 
+void update_as_ip(const int asnum, vector<AsInfo> & a, const AsIps & ai, 
 		const int v)
 {
 	for(auto& aas: a)
@@ -150,11 +150,131 @@ void generate_neighbor_ip(string &s, const set<string> &sa,
 {
 	while(sa.find(s) != sa.end())
 	{
-		i4 = rand() % 150;
+		i4 = rand() % 150 + 2;
 		s = tostringip(a.i1, a.i2, a.i3, i4);
 	}
 }
 
+//insert a as ip when they are connected but have no matching ips
+void insert_as_ip(const int asnum, vector<AsInfo> & va, 
+		const AsIps & a, const int v)
+{
+	for (int i =0; i< va.size(); ++i)
+	{
+		if(va[i].asnom == asnum)
+		{
+			AsIps asips1(a.i1, a.i2, a.i3, v);
+			va[i].vasIps.push_back(asips1);
+			break;
+		}	
+	}
+}
+
+//set json neighbor
+void set_json_neighbor(Json::Value & neighbor, const string &ni,
+		const int ebgp, const int ras, const string &us)
+{
+	neighbor["neighbor_ip"] = ni;
+	neighbor["ebgp_multihop"] = ebgp;
+	neighbor["remote_as"] = ras;
+	neighbor["update_source"] = us;
+}
+//set basic json info
+void set_basic_json(Json::Value &item, const int asnum, set<AsIps> &s)
+{
+	stringstream ss;
+	string sas;
+	ss << asnum;
+	ss >> sas;
+	item["server_name"] = string("route_") + sas;
+	item["server_id"] = "";
+	item["image"] = "0bfed3a7-a19a-4bb9-949e-d2eee0108d81";
+	item["zone"] = "nova";
+	item["type"] = "drt";
+	item["flavorref"] = "10";
+	item["as_name"] = sas;
+	Json::Value timer;
+	timer["holdtime"] = 30;
+	timer["keeplive"] = 10;
+	item["timer"] = timer;
+
+	Json::Value networks;
+	AsIps asipstemp = *(s.begin());
+	string ip_network;
+	string cidr_network;
+	stringstream ss_ip;
+	stringstream ss_cidr;
+	ss_ip << asipstemp.i1 <<"."<<asipstemp.i2<<"."<<asipstemp.i3
+		<<".1";
+	ss_ip >> ip_network;
+	ss_cidr << asipstemp.i1 <<"."<<asipstemp.i2<<"."<<asipstemp.i3
+		<<".0/24";
+	ss_cidr >> cidr_network;
+	networks["cidr"] = cidr_network;
+	networks["ip"] = ip_network;
+
+	item["networks"].append(networks);
+
+	s.erase(asipstemp);
+}
+
+//from the two vectors of ip to set json neighbor
+void set_json_neighbor_from_two_as(const vector<AsIps> &vupdata_source,
+	   const vector<AsIps> &vneighbor_ip, Json::Value &neighbor, 
+	   Json::Value &neighbors, Json::Value &item,
+	   const AsConn &a, int &if_realconn,
+	   set<string> &susedips, vector<AsInfo> &vAsInfo)
+{
+	for(const auto& au: vupdata_source)
+	{
+		for(const auto& an: vneighbor_ip)
+		{
+			if(au == an)
+			{
+				if_realconn = 1;
+				if(au.i4 != 0)  // already exist, before inserted 
+				{
+					//set json neighbor
+					set_json_neighbor(neighbor, tostringip(an),
+							5, a.asneighbor, tostringip(au));
+					neighbors.append(neighbor);
+
+					item["neighbors"] = neighbors;
+				}
+				else
+				{
+					int istartu = rand() % 150 + 2;
+					int istartn = rand() % 150 + 2;
+					string su = 
+						tostringip(au.i1, au.i2, au.i3, istartu);
+					//generate json neighbor ip
+					generate_neighbor_ip(su, susedips, au, istartu);
+					
+					susedips.insert(su);
+
+					string sn = 
+						tostringip(an.i1, an.i2, an.i3, istartn);
+					
+					generate_neighbor_ip(sn, susedips, an, istartn);
+					susedips.insert(sn);
+
+					set_json_neighbor(neighbor,
+							sn, 5, a.asneighbor, su);
+					neighbors.append(neighbor);
+
+					item["neighbors"] = neighbors;
+
+					//update neighbor and update ip of the two as
+					update_as_ip(a.as, vAsInfo, au, istartu);
+					update_as_ip(a.asneighbor, 
+							vAsInfo, an, istartn);
+				}
+			}
+			if(if_realconn)break;
+		}
+		if(if_realconn)break;
+	}
+}
 //output json
 void output_json(const std::string &filename,
 		const set<AsConn> &sasconn,
@@ -170,9 +290,10 @@ void output_json(const std::string &filename,
 	//for(const auto& a: vasconn)
 	for(auto a = sasconn.cbegin(); a != sasconn.cend(); ++a)
 	{
-
+		//the as is first accured
 		if(susedasnum.find(a->as) == susedasnum.end())
 		{
+			//weather the two as is connceted 
 			int if_realconn=0;
 			Json::Value item;
 
@@ -182,143 +303,44 @@ void output_json(const std::string &filename,
 			
 			get_as_ips(a->as, vupdata_source, vAsInfo);
 			get_as_ips(a->asneighbor, vneighbor_ip, vAsInfo);
+			//the two as's ip's size is not null
 			if(vupdata_source.size() && vneighbor_ip.size())
 			{
-				for(const auto& au: vupdata_source)
-				{
-					for(const auto& an: vneighbor_ip)
-					{
-						if(au == an)
-						{
-							if_realconn = 1;
-							if(au.i4 != 0)  // already exist, before inserted 
-							{
-								neighbor["neighbor_ip"] = tostringip(an);
-								neighbor["ebgp_multihop"] = 5;
-								neighbor["remote_as"] = a->asneighbor;
-								neighbor["update_source"] = tostringip(au);
-								neighbors.append(neighbor);
-
-								item["neighbors"] = neighbors;
-							}
-							else
-							{
-								int istartu = rand() % 150;
-								int istartn = rand() % 150;
-								string su = 
-									tostringip(au.i1, au.i2, au.i3, istartu);
-								//generate json neighbor ip
-								generate_neighbor_ip(su, susedips, au, istartu);
-								
-								susedips.insert(su);
-
-								istartn = rand() % 150;
-								string sn = 
-									tostringip(an.i1, an.i2, an.i3, istartn);
-								
-								generate_neighbor_ip(sn, susedips, an, istartn);
-								susedips.insert(sn);
-
-								neighbor["neighbor_ip"] = sn;
-								neighbor["ebgp_multihop"] = 5;
-								neighbor["remote_as"] = a->asneighbor;
-								neighbor["update_source"] = su;
-								neighbors.append(neighbor);
-
-								item["neighbors"] = neighbors;
-
-								//update neighbor and update ip of the two as
-								update_as_ip(a->as, vAsInfo, au, istartu);
-								update_as_ip(a->asneighbor, 
-										vAsInfo, an, istartn);
-							}
-						}
-						if(if_realconn)break;
-					}
-					if(if_realconn)break;
-				}
+				//two for, think another better way
+				//from the two vectors of ip to set json neighbor
+				set_json_neighbor_from_two_as(vupdata_source, vneighbor_ip,
+						neighbor, neighbors, item, *a, if_realconn,
+						susedips, vAsInfo);
 			}
 			// miss conneciton, make a new one
 			if(!if_realconn)
 			{
 				AsIps au, an, aorign;
 				au = an = aorign = *(sotherips.begin());
-				int istartu = rand() % 150;
-				int istartn = rand() % 150;
+				int istartu = rand() % 150 + 2;
+				int istartn = rand() % 150 + 2;
 				string su, sn;
 				su = tostringip(au.i1, au.i2, au.i3, istartu);
 				generate_neighbor_ip(su, susedips, au, istartu);
 				susedips.insert(su);
 
-				istartn = rand() % 150;
 				sn = tostringip(an.i1, an.i2, an.i3, istartn);
 				generate_neighbor_ip(sn, susedips, an, istartn);
 				susedips.insert(sn);
 
-				neighbor["neighbor_ip"] = sn;
-				neighbor["ebgp_multihop"] = 5;
-				neighbor["remote_as"] = a->asneighbor;
-				neighbor["update_source"] = su;
+				set_json_neighbor(neighbor, sn, 5, a->asneighbor, su);
 				neighbors.append(neighbor);
 
 				item["neighbors"] = neighbors;
 
-				//insert the ip the neighbor as
 				sotherips.erase(aorign);
-				for (int i =0; i< vAsInfo.size(); ++i)
-				{
-					if(vAsInfo[i].asnom == a->asneighbor)
-					{
-						AsIps asips1(an.i1, an.i2, an.i3, istartn);
-						vAsInfo[i].vasIps.push_back(asips1);
-						break;
-					}	
-				}
-				for (int i =0; i< vAsInfo.size(); ++i)
-				{
-					if(vAsInfo[i].asnom == a->as)
-					{
-						AsIps asips1(au.i1, au.i2, au.i3, istartu);
-						vAsInfo[i].vasIps.push_back(asips1);
-						break;
-					}	
-				}
+				//insert the ip the neighbor as
+				insert_as_ip(a->asneighbor, vAsInfo, an, istartn);
+				insert_as_ip(a->as, vAsInfo, au, istartu);
 			}
 				
-			stringstream ss;
-			string sas;
-			ss << a->as;
-			ss >> sas;
-			item["server_name"] = string("route_") + sas;
-			item["server_id"] = "";
-			item["image"] = "0bfed3a7-a19a-4bb9-949e-d2eee0108d81";
-			item["zone"] = "nova";
-			item["type"] = "drt";
-			item["flavorref"] = "10";
-			item["as_name"] = sas;
-			Json::Value timer;
-			timer["holdtime"] = 30;
-			timer["keeplive"] = 10;
-			item["timer"] = timer;
-
-			Json::Value networks;
-			AsIps asipstemp = *(sotherips.begin());
-			string ip_network;
-			string cidr_network;
-			stringstream ss_ip;
-			stringstream ss_cidr;
-			ss_ip << asipstemp.i1 <<"."<<asipstemp.i2<<"."<<asipstemp.i3
-				<<".1";
-			ss_ip >> ip_network;
-			ss_cidr << asipstemp.i1 <<"."<<asipstemp.i2<<"."<<asipstemp.i3
-				<<".0/24";
-			ss_cidr >> cidr_network;
-			networks["cidr"] = cidr_network;
-			networks["ip"] = ip_network;
-
-			item["networks"].append(networks);
-			//item["networks"] = networks;
-			sotherips.erase(asipstemp);
+			//set basic json info
+			set_basic_json(item, a->as, sotherips);
 
 			server.append(item);  // added to json
 			susedasnum.insert(a->as); //used as num
@@ -357,36 +379,31 @@ void output_json(const std::string &filename,
 										cout << 
 											" 418 wwwwwwwwwwwwwwwwwwrong!!!"
 											<<endl;
-										neighbor["neighbor_ip"] = tostringip(an);
-										neighbor["ebgp_multihop"] = 5;
-										neighbor["remote_as"] = a->asneighbor;
-										neighbor["update_source"] = 
-											tostringip(au);
+										set_json_neighbor(neighbor,
+											   	tostringip(an), 5,
+												a->asneighbor, tostringip(au));
 
 										server[i]["neighbors"].append(neighbor);
 									}
 									else
 									{
 										string su, sn;
-										int istartu = rand() % 150;
-										int istartn = rand() % 150;
+										int istartu = rand() % 150 + 2;
+										int istartn = rand() % 150 + 2;
 										su = tostringip(au.i1, 
 												au.i2, au.i3, istartu);
 										generate_neighbor_ip(su, susedips, 
 												au, istartu);
 										susedips.insert(su);
 
-										istartn = rand() % 150;
 										sn = tostringip(an.i1, 
 												an.i2, an.i3, istartn);
 										generate_neighbor_ip(sn, susedips, 
 												an, istartn);
 										susedips.insert(sn);
 
-										neighbor["neighbor_ip"] = sn;
-										neighbor["ebgp_multihop"] = 5;
-										neighbor["remote_as"] = a->asneighbor;
-										neighbor["update_source"] = su;
+										set_json_neighbor(neighbor,sn, 5,
+											   	a->asneighbor, su);
 
 										server[i]["neighbors"].append(neighbor);
 										update_as_ip(a->as, 
@@ -406,46 +423,26 @@ void output_json(const std::string &filename,
 						AsIps au, an, aorign;
 						au = an = aorign = *(sotherips.begin());
 						string su, sn;
-						int istartu = rand() % 150;
-						int istartn = rand() % 150;
+						int istartu = rand() % 150 + 2;
+						int istartn = rand() % 150 + 2;
 						su = tostringip(au.i1, au.i2, au.i3, istartu);
 						generate_neighbor_ip(su, susedips, au, istartu);
 						susedips.insert(su);
 
-						istartn = rand() % 150;
 						sn = tostringip(an.i1, an.i2, an.i3, istartn);
 						generate_neighbor_ip(sn, susedips, an, istartn);
 						susedips.insert(sn);
 
-						neighbor["neighbor_ip"] = sn;
-						neighbor["ebgp_multihop"] = 5;
-						neighbor["remote_as"] = a->asneighbor;
-						neighbor["update_source"] = su;
+						set_json_neighbor(neighbor, sn, 5, a->asneighbor, su);
 						//neighbors.append(neighbor);
 
 						//item["neighbors"] = neighbors;
 						server[i]["neighbors"].append(neighbor);
 
-						//insert the ip the neighbor as
 						sotherips.erase(aorign);
-						for (int i1 =0; i1< vAsInfo.size(); ++i1)
-						{
-							if(vAsInfo[i1].asnom == a->asneighbor)
-							{
-								AsIps asips1(an.i1, an.i2, an.i3, istartn);
-								vAsInfo[i1].vasIps.push_back(asips1);
-								break;
-							}	
-						}
-						for (int i2 =0; i2< vAsInfo.size(); ++i2)
-						{
-							if(vAsInfo[i2].asnom == a->as)
-							{
-								AsIps asips1(au.i1, au.i2, au.i3, istartu);
-								vAsInfo[i2].vasIps.push_back(asips1);
-								break;
-							}	
-						}
+						//insert the ip the neighbor as
+						insert_as_ip(a->asneighbor, vAsInfo, an, istartn);
+						insert_as_ip(a->as, vAsInfo, au, istartu);
 					}
 
 					//end if : ==
