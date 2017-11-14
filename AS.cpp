@@ -1,4 +1,8 @@
+#include <dirent.h>
+#include <time.h>
+#include <stdlib.h>
 #include <iostream>
+
 #include <set>
 #include <fstream>
 #include <vector>
@@ -6,36 +10,12 @@
 #include <algorithm>
 #include <sstream>
 
-#include <dirent.h>
-#include <time.h>
-#include <stdlib.h>
-
 #include "json/json.h"
 
+#include "AS.h"
 
 using namespace std;
 
-struct AsConn
-{
-	AsConn(int as1, int asneighbor1): as(as1), asneighbor(asneighbor1) {}
-	int as;
-	int asneighbor;
-};
-struct AsIps
-{
-	AsIps() {}
-	AsIps(int i11, int i21, int i31, int i41):
-		i1(i11), i2(i21), i3(i31), i4(i41) {}
-	int i1;
-	int i2;
-	int i3;
-	int i4;
-	bool operator==(const AsIps &a) const
-	{
-		return a.i1 == this->i1 && a.i2 == this->i2 &&
-		   	a.i3 == this->i3;
-	}
-};
 bool compareAsIps(const AsIps &a1, const AsIps &a2)
 {
 	if(a1.i1!=a2.i1) return a1.i1<a2.i1;
@@ -49,16 +29,6 @@ bool compareAsConn(const AsConn &a1, const AsConn &a2)
 	else return a1.asneighbor  < a2.asneighbor;
 }
 
-struct AsInfo
-{
-	AsInfo(int asnom1, const vector<AsIps> &vasIps1):asnom(asnom1)
-	{
-		vasIps.assign(vasIps1.begin(), vasIps1.end());
-	}
-	int asnom;
-	vector<AsIps> vasIps;
-};
-
 string tostringip(int i1, int i2, int i3, int i4)
 {
 	stringstream ss;
@@ -71,20 +41,11 @@ string tostringip(const AsIps& a)
 {
 	return tostringip(a.i1, a.i2, a.i3, a.i4);
 }
-
-//vector<AsConn> vasconn; //500 as connection
-//as connection, two side, so some add by self 
-set<AsConn, decltype(compareAsConn)*> sasconn(compareAsConn);
-vector<AsInfo> vAsInfo;  //store 500 as' info(as num and ips) 
-set<AsIps, decltype(compareAsIps)*> sotherips(compareAsIps);  //not used ips
-set<string> susedips;  //used ips for nei
-set<int> susedasnum;  //num of used as in json
-
-
-int main() 
+//stroe as connections
+void store_asconn(const string& filename, 
+		set<AsConn> &sasconn)
 {
-	//stroe as connections
-	ifstream fin("./as_rel_500.txt");
+	ifstream fin(filename);
 	int as1, as2;
 	char c1;
 	string stemp;
@@ -98,13 +59,17 @@ int main()
 		sasconn.insert(aSConnre);
 	}
 	fin.close();
+}
 
-	//read all files in the as directory
+//read all files in the as directory
+//init as's info
+void init_asinfo(const string &filename,
+		vector<AsInfo> &vAsInfo)
+{
 	struct dirent *ptr;      
     DIR *dir;  
-    string PATH = "./as500";  
-    dir = opendir(PATH.c_str());   
-    vector<string> asfiles;  
+    dir = opendir(filename.c_str());   
+	std::vector<string> asfiles;  
     while((ptr=readdir(dir)) != NULL)  
     {  
    
@@ -114,19 +79,18 @@ int main()
         asfiles.push_back(ptr->d_name);  
     }  
 
-	srand((int)time(0));  //4th num for neighbor and update ip 
 	//store as infos
 	for(const auto& a: asfiles)
 	{
 		char ctemp;
 		int ias;
-		istringstream ss(a);
+		std::istringstream ss(a);
 		ss >> ctemp >> ctemp >> ias;
 
-		string asfilename = string("./as500/") + a;
-		ifstream fin(asfilename);
+		std::string asfilename = filename + a;
+		std::ifstream fin(asfilename);
 		int i1, i2, i3, i4;
-		vector<AsIps> vasipstemp;
+		std::vector<AsIps> vasipstemp;
 		while(!fin.eof() &&
 			   	fin >> i1 >> ctemp >> i2 >> ctemp >> i3 >> ctemp >> i4)
 		{
@@ -137,9 +101,13 @@ int main()
 		vAsInfo.push_back(asInfoTemp);
 		fin.close();
 	}
+}
 
-	//handle other ips for json's networks parameter
-	ifstream fin_otherips("./as00000.txt");
+//init other as's ips
+void init_other_ips(const std::string &filename,
+		std::set<AsIps> &sotherips)
+{
+	std::ifstream fin_otherips(filename);
 	int i1o, i2o, i3o, i4o;
 	char cotemp;
 	
@@ -152,13 +120,19 @@ int main()
 		sotherips.insert(asIps);
 	}
 	fin_otherips.close();
-
-
+}
+//output json
+void output_json(const std::string &filename,
+		const set<AsConn> &sasconn,
+		vector<AsInfo> &vAsInfo,
+		set<AsIps> &sotherips,
+		set<string> &susedips,
+		set<int> & susedasnum)
+{
 	//json
 	Json::Value root;
 	Json::Value server;
 
-	int count_conn =0;
 	//for(const auto& a: vasconn)
 	for(auto a = sasconn.cbegin(); a != sasconn.cend(); ++a)
 	{
@@ -573,9 +547,7 @@ int main()
 	root["server"] = server;
 	//store json file
 	string jsonout = root.toStyledString();
-	ofstream fout("jsonoutput");
+	ofstream fout(filename);
 	fout<<jsonout;
 	fout.close();
-
-	return 0;
 }
