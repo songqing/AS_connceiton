@@ -66,9 +66,6 @@ struct AsInfo
 	std::vector<AsIps> vasIps;
 };
 
-//used for set
-bool compareAsIps(const AsIps &a1, const AsIps &a2);
-bool compareAsConn(const AsConn &a1, const AsConn &a2);
 
 //change int and struct to string
 std::string tostringip(int i1, int i2, int i3, int i4);
@@ -83,6 +80,13 @@ void init_asinfo(const std::string &filename,
 //init other as's ips
 void init_other_ips(const std::string &filename,
 		std::set<AsIps> &sotherips);
+
+//get a as's ips
+void get_as_ips(int asnum, std::vector<AsIps> & vo, 
+		const std::vector<AsInfo> & vi);
+//generate neighbor ip
+void generate_neighbor_ip(std::string &s, const std::set<std::string> &sa,
+	   const AsIps &a, int &i4);
 //output json
 void output_json(const std::string &filename,
 		const std::set<AsConn> &sasconn,
