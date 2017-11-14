@@ -43,6 +43,11 @@ bool compareAsIps(const AsIps &a1, const AsIps &a2)
 	else if(a1.i3!=a2.i3) return a1.i3 < a2.i3;
 	else return a1.i4  < a2.i4;
 }
+bool compareAsConn(const AsConn &a1, const AsConn &a2)
+{
+	if(a1.as!=a2.as) return a1.as<a2.as;
+	else return a1.asneighbor  < a2.asneighbor;
+}
 
 struct AsInfo
 {
@@ -67,7 +72,9 @@ string tostringip(const AsIps& a)
 	return tostringip(a.i1, a.i2, a.i3, a.i4);
 }
 
-vector<AsConn> vasconn; //500 as connection
+//vector<AsConn> vasconn; //500 as connection
+//as connection, two side, so some add by self 
+set<AsConn, decltype(compareAsConn)*> sasconn(compareAsConn);
 vector<AsInfo> vAsInfo;  //store 500 as' info(as num and ips) 
 set<AsIps, decltype(compareAsIps)*> sotherips(compareAsIps);  //not used ips
 set<string> susedips;  //used ips for nei
@@ -85,7 +92,10 @@ int main()
 	{
 		getline(fin, stemp);
 		AsConn aSConn(as1, as2);
-		vasconn.push_back(aSConn);
+		//vasconn.push_back(aSConn);
+		sasconn.insert(aSConn);
+		AsConn aSConnre(as2, as1);
+		sasconn.insert(aSConnre);
 	}
 	fin.close();
 
@@ -149,10 +159,11 @@ int main()
 	Json::Value server;
 
 	int count_conn =0;
-	for(const auto& a: vasconn)
+	//for(const auto& a: vasconn)
+	for(auto a = sasconn.cbegin(); a != sasconn.cend(); ++a)
 	{
 
-		if(susedasnum.find(a.as) == susedasnum.end())
+		if(susedasnum.find(a->as) == susedasnum.end())
 		{
 			int if_realconn=0;
 			Json::Value item;
@@ -162,7 +173,7 @@ int main()
 			vector<AsIps> vupdata_source, vneighbor_ip;
 			for(const auto& aainfo: vAsInfo)
 			{
-				if(aainfo.asnom == a.as)
+				if(aainfo.asnom == a->as)
 				{
 					vupdata_source.assign(aainfo.vasIps.begin(),
 							aainfo.vasIps.end());
@@ -171,7 +182,7 @@ int main()
 			}
 			for(const auto& aainfo: vAsInfo)
 			{
-				if(aainfo.asnom == a.asneighbor)
+				if(aainfo.asnom == a->asneighbor)
 				{
 					vneighbor_ip.assign(aainfo.vasIps.begin(),
 							aainfo.vasIps.end());
@@ -191,7 +202,7 @@ int main()
 							{
 								neighbor["neighbor_ip"] = tostringip(an);
 								neighbor["ebgp_multihop"] = 5;
-								neighbor["remote_as"] = a.asneighbor;
+								neighbor["remote_as"] = a->asneighbor;
 								neighbor["update_source"] = tostringip(au);
 								neighbors.append(neighbor);
 
@@ -224,7 +235,7 @@ int main()
 
 								neighbor["neighbor_ip"] = sn;
 								neighbor["ebgp_multihop"] = 5;
-								neighbor["remote_as"] = a.asneighbor;
+								neighbor["remote_as"] = a->asneighbor;
 								neighbor["update_source"] = su;
 								neighbors.append(neighbor);
 
@@ -233,7 +244,7 @@ int main()
 								//update neighbor and update ip of the two as
 								for(auto& aas: vAsInfo)
 								{
-									if(aas.asnom == a.as)
+									if(aas.asnom == a->as)
 									{
 										for(int ii =0;
 												ii < aas.vasIps.size(); ++ii)
@@ -249,7 +260,7 @@ int main()
 								}	
 								for(auto& aasn: vAsInfo)
 								{
-									if(aasn.asnom == a.asneighbor)
+									if(aasn.asnom == a->asneighbor)
 									{
 										for(int ii =0;
 												ii < aasn.vasIps.size(); ++ii)
@@ -297,7 +308,7 @@ int main()
 
 				neighbor["neighbor_ip"] = sn;
 				neighbor["ebgp_multihop"] = 5;
-				neighbor["remote_as"] = a.asneighbor;
+				neighbor["remote_as"] = a->asneighbor;
 				neighbor["update_source"] = su;
 				neighbors.append(neighbor);
 
@@ -307,7 +318,7 @@ int main()
 				sotherips.erase(aorign);
 				for (int i =0; i< vAsInfo.size(); ++i)
 				{
-					if(vAsInfo[i].asnom == a.asneighbor)
+					if(vAsInfo[i].asnom == a->asneighbor)
 					{
 						AsIps asips1(an.i1, an.i2, an.i3, istartn);
 						vAsInfo[i].vasIps.push_back(asips1);
@@ -316,7 +327,7 @@ int main()
 				}
 				for (int i =0; i< vAsInfo.size(); ++i)
 				{
-					if(vAsInfo[i].asnom == a.as)
+					if(vAsInfo[i].asnom == a->as)
 					{
 						AsIps asips1(au.i1, au.i2, au.i3, istartu);
 						vAsInfo[i].vasIps.push_back(asips1);
@@ -327,7 +338,7 @@ int main()
 				
 			stringstream ss;
 			string sas;
-			ss << a.as;
+			ss << a->as;
 			ss >> sas;
 			item["server_name"] = string("route_") + sas;
 			item["server_id"] = "";
@@ -361,7 +372,7 @@ int main()
 			sotherips.erase(asipstemp);
 
 			server.append(item);  // added to json
-			susedasnum.insert(a.as); //used as num
+			susedasnum.insert(a->as); //used as num
 		}
 		else
 		{
@@ -374,7 +385,7 @@ int main()
 				Json::Value neighbor;
 				
 				stringstream ssas;
-				ssas << a.as;
+				ssas << a->as;
 				string sastemp;
 				ssas >> sastemp;
 				if(server[i]["as_name"] == sastemp)
@@ -382,7 +393,7 @@ int main()
 					vector<AsIps> vupdata_source, vneighbor_ip;
 					for(const auto& aainfo: vAsInfo)
 					{
-						if(aainfo.asnom == a.as)
+						if(aainfo.asnom == a->as)
 						{
 							vupdata_source.assign(aainfo.vasIps.begin(),
 									aainfo.vasIps.end());
@@ -391,7 +402,7 @@ int main()
 					}
 					for(const auto& aainfo: vAsInfo)
 					{
-						if(aainfo.asnom == a.asneighbor)
+						if(aainfo.asnom == a->asneighbor)
 						{
 							vneighbor_ip.assign(aainfo.vasIps.begin(),
 									aainfo.vasIps.end());
@@ -415,7 +426,7 @@ int main()
 											<<endl;
 										neighbor["neighbor_ip"] = tostringip(an);
 										neighbor["ebgp_multihop"] = 5;
-										neighbor["remote_as"] = a.asneighbor;
+										neighbor["remote_as"] = a->asneighbor;
 										neighbor["update_source"] = 
 											tostringip(au);
 
@@ -449,13 +460,13 @@ int main()
 
 										neighbor["neighbor_ip"] = sn;
 										neighbor["ebgp_multihop"] = 5;
-										neighbor["remote_as"] = a.asneighbor;
+										neighbor["remote_as"] = a->asneighbor;
 										neighbor["update_source"] = su;
 
 										server[i]["neighbors"].append(neighbor);
 										for(auto& aas: vAsInfo)
 										{
-											if(aas.asnom == a.as)
+											if(aas.asnom == a->as)
 											{
 												for(int ii =0;
 														ii < aas.vasIps.size(); 
@@ -473,7 +484,7 @@ int main()
 										}	
 										for(auto& aasn: vAsInfo)
 										{
-											if(aasn.asnom == a.asneighbor)
+											if(aasn.asnom == a->asneighbor)
 											{
 												for(int ii =0;
 														ii < aasn.vasIps.size();
@@ -523,7 +534,7 @@ int main()
 
 						neighbor["neighbor_ip"] = sn;
 						neighbor["ebgp_multihop"] = 5;
-						neighbor["remote_as"] = a.asneighbor;
+						neighbor["remote_as"] = a->asneighbor;
 						neighbor["update_source"] = su;
 						//neighbors.append(neighbor);
 
@@ -534,7 +545,7 @@ int main()
 						sotherips.erase(aorign);
 						for (int i1 =0; i1< vAsInfo.size(); ++i1)
 						{
-							if(vAsInfo[i1].asnom == a.asneighbor)
+							if(vAsInfo[i1].asnom == a->asneighbor)
 							{
 								AsIps asips1(an.i1, an.i2, an.i3, istartn);
 								vAsInfo[i1].vasIps.push_back(asips1);
@@ -543,7 +554,7 @@ int main()
 						}
 						for (int i2 =0; i2< vAsInfo.size(); ++i2)
 						{
-							if(vAsInfo[i2].asnom == a.as)
+							if(vAsInfo[i2].asnom == a->as)
 							{
 								AsIps asips1(au.i1, au.i2, au.i3, istartu);
 								vAsInfo[i2].vasIps.push_back(asips1);
