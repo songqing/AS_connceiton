@@ -20,7 +20,7 @@ vector<AsInfo> vAsInfo;
 //still have not used ips, used for json's neighbor and update ip
 set<AsIps> sotherips;
 //have used ip for neighbor and update ip in json
-set<string> susedips;
+multiset<string> susedips;
 //used as's num in json
 set<int> susedasnum;
 
@@ -35,6 +35,24 @@ int main()
 
 	//handle other ips for json's networks parameter
 	init_other_ips("./as00000.txt", sotherips);
+
+	//test set and vector, whether have same ip
+	set<AsIps> smulti_ip;
+	for(const auto& a: vAsInfo)
+	{
+		for(const auto& ip:a.vasIps)
+		{
+			if(sotherips.find(ip) != sotherips.end())
+			{
+				smulti_ip.insert(ip);
+				//cout<<tostringip(ip)<<endl;
+			}
+		}
+	}
+	for(const auto& s: smulti_ip)
+	{
+		sotherips.erase(s);
+	}
 	
 	//output to json
 	output_json("jsonoutput", sasconn, vAsInfo, sotherips,

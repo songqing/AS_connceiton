@@ -43,8 +43,7 @@ struct AsIps
 
 	bool operator==(const AsIps &a) const
 	{
-		return a.i1 == this->i1 && a.i2 == this->i2 &&
-		   	a.i3 == this->i3;
+		return a.i1 == i1 && a.i2 == i2 && a.i3 == i3;
 	}
 	bool operator<(const AsIps &a) const
 	{
@@ -68,6 +67,7 @@ struct AsInfo
 };
 
 
+std::string tostring(int i);
 //change int and struct to string
 std::string tostringip(int i1, int i2, int i3, int i4);
 std::string tostringip(const AsIps& a);
@@ -86,7 +86,7 @@ void init_other_ips(const std::string &filename,
 void get_as_ips(const int asnum, std::vector<AsIps> & vo, 
 		const std::vector<AsInfo> & vi);
 //generate neighbor ip
-void generate_neighbor_ip(std::string &s, const std::set<std::string> &sa,
+void generate_neighbor_ip(std::string &s, const std::multiset<std::string> &sa,
 	   const AsIps &a, int &i4);
 //insert a as ip when they are connected but have no matching ips
 void insert_as_ip(const int asnum, std::vector<AsInfo> & va, 
@@ -99,13 +99,16 @@ void set_basic_json(Json::Value &item, const int asnum, std::set<AsIps> &s);
 //from the two vectors of ip to set json neighbor
 void set_json_neighbor_from_two_as(const std::vector<AsIps> &updata_source,
 	   const std::vector<AsIps> &vneighbor_ip, Json::Value &neighbor, 
-	   Json::Value &neighbors, Json::Value &item,
 	   const AsConn &a, int &if_realconn,
-	   std::set<std::string> &susedips, std::vector<AsInfo> &vAsInfo);
+	   std::multiset<std::string> &susedips, std::vector<AsInfo> &vAsInfo);
+//add a new connection from other ips
+void add_extar_conn(std::set<AsIps> &sotherips, 
+		std::multiset<std::string> &susedips, Json::Value &neighbor,
+		std::vector<AsInfo> &vAsInfo, const int asnum, const int asneighbor);
 //output json
 void output_json(const std::string &filename,
 		const std::set<AsConn> &sasconn,
 		std::vector<AsInfo> &vAsInfo,
 		std::set<AsIps> &sotherips,
-		std::set<std::string> &susedips,
+		std::multiset<std::string> &susedips,
 		std::set<int> & susedasnum);
