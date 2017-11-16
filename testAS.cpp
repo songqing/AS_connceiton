@@ -20,7 +20,7 @@ int main()
 	{
 		server = root["server"];
 		int server_size = server.size();
-		//test whether have more than 2 same ip
+		//store ip and it's count as a map
 		for(int i=0;i<server_size;++i)
 		{
 			Json::Value a_neighbor = server[i]["neighbors"];
@@ -29,16 +29,17 @@ int main()
 				string neighbor_ip = a_neighbor[j]["neighbor_ip"].asString();
 				string update_source = a_neighbor[j]["update_source"].asString();
 
-				if(++(ip_count[neighbor_ip]) > 2)
-				{
-					cout << neighbor_ip <<endl;
-					return 0;
-				}
-				if(++(ip_count[update_source]) > 2)
-				{
-					cout << update_source <<endl;
-					return 0;
-				}
+				++(ip_count[neighbor_ip]);
+				++(ip_count[update_source]);
+			}
+		}
+		//test whether the ip's count equals 2
+		for(const auto& m: ip_count)
+		{
+			if(m.second != 2)
+			{
+				cout << m.first << ": " <<m.second <<endl;
+//				return 0;
 			}
 		}
 	}
