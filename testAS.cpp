@@ -15,7 +15,7 @@ int main()
 	Json::Reader reader;
 
 	Json::Value server;
-	ifstream fin("jsonoutput", ios::binary);
+	ifstream fin("jsonoutput_c", ios::binary);
 	if(reader.parse(fin, root))
 	{
 		server = root["server"];
@@ -39,7 +39,6 @@ int main()
 			if(m.second != 2)
 			{
 				cout << m.first << ": " <<m.second <<endl;
-//				return 0;
 			}
 		}
 	}

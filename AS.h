@@ -13,6 +13,11 @@
 
 #include "json/json.h"
 
+using std::string;
+using std::vector;
+using std::set;
+using std::multiset;
+using std::map;
 //store as connection, example:
 //as1 as2
 //5   6
@@ -57,62 +62,70 @@ struct AsIps
 //store a as' info, include as's num and as' ips
 struct AsInfo
 {
-	AsInfo(int asnom1, const std::vector<AsIps> &vasIps1): asnom(asnom1)
+	AsInfo(int asnom1, const vector<AsIps> &vasIps1): asnom(asnom1)
 	{
 		vasIps.assign(vasIps1.begin(), vasIps1.end());
 	}
 
 	int asnom;
-	std::vector<AsIps> vasIps;
+	vector<AsIps> vasIps;
 };
 
+class AS
+{
+	public:
+
+		//make sure only less than 2 same ip
+		void less_than_2_same_ip();
+
+		//test set and vector, whether have same ip
+		void handle_repeated_ip(); 
+	public:
+		//init as connections
+		void init_asconn(const string &f);
+		//read all files in the as directory,init as's info
+		void init_asinfo(const string &f);
+		//init other as's ips
+		void init_other_ips(const string &f);
+
+		//get a as's ips
+		void get_as_ips(const int asnum, vector<AsIps> &vo); 
+		//update a as's ip (the 4th num)
+		void update_as_ip(const int asnum, const AsIps & ai, const int v);
+		//generate neighbor ip
+		void generate_neighbor_ip(string &s, const AsIps &a, int &i4);
+		//insert a as ip when they are connected but have no matching ips
+		void insert_as_ip(const int asnum, const AsIps & a, const int v);
+		//set basic json info
+		void set_basic_json(Json::Value &item, const int asnum);
+		//from the two vectors of ip to set json neighbor
+		void set_json_neighbor_from_two_as(const vector<AsIps> &updata_source,
+			   const vector<AsIps> &vneighbor_ip, Json::Value &neighbor, 
+			   const AsConn &a, int &if_realconn);
+		//add a new connection from other ips
+		void add_extra_conn(Json::Value &neighbor, const int asnum, const int asneighbor);
+		//set_json_neighbor_changed_ip
+		void set_json_neighbor_ip(const AsConn &a, Json::Value &neighbor);
+		//output json
+		void output_json(const string &filename);
+	private:
+		//as connection, two side, if have 5 -> 6, then should have 6 -> 5
+		set<AsConn> sasconn;
+		//store as' info(as's num and ips) 
+		vector<AsInfo> vAsInfo; 
+		//still have not used ips, used for json's neighbor and update ip
+		set<AsIps> sotherips;
+		//have used ip for neighbor and update ip in json
+		multiset<string> susedips;
+		//used as's num in json
+		set<int> susedasnum;
+};
 
 std::string tostring(int i);
 //change int and struct to string
 std::string tostringip(int i1, int i2, int i3, int i4);
 std::string tostringip(const AsIps& a);
-//stroe as connections
-void store_asconn(const std::string& filename, 
-		std::set<AsConn> &sasconn);
-//read all files in the as directory
-//init as's info
-void init_asinfo(const std::string &filename,
-		std::vector<AsInfo> &vAsInfo);
-//init other as's ips
-void init_other_ips(const std::string &filename,
-		std::set<AsIps> &sotherips);
 
-//get a as's ips
-void get_as_ips(const int asnum, std::vector<AsIps> & vo, 
-		const std::vector<AsInfo> & vi);
-//generate neighbor ip
-void generate_neighbor_ip(std::string &s, const std::multiset<std::string> &sa,
-	   const AsIps &a, int &i4);
-//insert a as ip when they are connected but have no matching ips
-void insert_as_ip(const int asnum, std::vector<AsInfo> & va, 
-		const AsIps & a, const int v);
 //set json neighbor
 void set_json_neighbor(Json::Value &neighbor, const std::string & ni,
 		const int ebgp, const int ras, const std::string &us);
-//set basic json info
-void set_basic_json(Json::Value &item, const int asnum, std::set<AsIps> &s);
-//from the two vectors of ip to set json neighbor
-void set_json_neighbor_from_two_as(const std::vector<AsIps> &updata_source,
-	   const std::vector<AsIps> &vneighbor_ip, Json::Value &neighbor, 
-	   const AsConn &a, int &if_realconn,
-	   std::multiset<std::string> &susedips, std::vector<AsInfo> &vAsInfo);
-//add a new connection from other ips
-void add_extra_conn(std::set<AsIps> &sotherips, 
-		std::multiset<std::string> &susedips, Json::Value &neighbor,
-		std::vector<AsInfo> &vAsInfo, const int asnum, const int asneighbor);
-//set_json_neighbor_changed_ip
-void set_json_neighbor_ip(std::vector<AsInfo> &vAsInfo, const AsConn &a, 
-		std::multiset<std::string> &susedips, std::set<AsIps> &sotherips,
-		Json::Value &neighbor);
-//output json
-void output_json(const std::string &filename,
-		const std::set<AsConn> &sasconn,
-		std::vector<AsInfo> &vAsInfo,
-		std::set<AsIps> &sotherips,
-		std::multiset<std::string> &susedips,
-		std::set<int> & susedasnum);
