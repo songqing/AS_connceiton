@@ -102,9 +102,13 @@ void set_json_neighbor_from_two_as(const std::vector<AsIps> &updata_source,
 	   const AsConn &a, int &if_realconn,
 	   std::multiset<std::string> &susedips, std::vector<AsInfo> &vAsInfo);
 //add a new connection from other ips
-void add_extar_conn(std::set<AsIps> &sotherips, 
+void add_extra_conn(std::set<AsIps> &sotherips, 
 		std::multiset<std::string> &susedips, Json::Value &neighbor,
 		std::vector<AsInfo> &vAsInfo, const int asnum, const int asneighbor);
+//set_json_neighbor_changed_ip
+void set_json_neighbor_ip(std::vector<AsInfo> &vAsInfo, const AsConn &a, 
+		std::multiset<std::string> &susedips, std::set<AsIps> &sotherips,
+		Json::Value &neighbor);
 //output json
 void output_json(const std::string &filename,
 		const std::set<AsConn> &sasconn,

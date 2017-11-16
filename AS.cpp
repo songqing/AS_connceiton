@@ -280,7 +280,7 @@ void set_json_neighbor_from_two_as(const vector<AsIps> &vupdata_source,
 	}
 }
 //add a new connection from other ips
-void add_extar_conn(set<AsIps> &sotherips, multiset<string> &susedips, 
+void add_extra_conn(set<AsIps> &sotherips, multiset<string> &susedips, 
 		Json::Value &neighbor, 
 		vector<AsInfo> &vAsInfo, const int asnum, const int asneighbor)
 {
@@ -303,6 +303,33 @@ void add_extar_conn(set<AsIps> &sotherips, multiset<string> &susedips,
 	insert_as_ip(asneighbor, vAsInfo, an, istartn);
 	insert_as_ip(asnum, vAsInfo, au, istartu);
 }
+//set_json_neighbor_changed_ip
+void set_json_neighbor_ip(vector<AsInfo> &vAsInfo, const AsConn &a, 
+		multiset<string> &susedips, set<AsIps> &sotherips, Json::Value &neighbor)
+{
+	//weather the two as is connceted 
+	int if_realconn=0;
+	vector<AsIps> vupdata_source, vneighbor_ip;
+	
+	get_as_ips(a.as, vupdata_source, vAsInfo);
+	get_as_ips(a.asneighbor, vneighbor_ip, vAsInfo);
+	//the two as's ip's size is not null
+	if(vupdata_source.size() && vneighbor_ip.size())
+	{
+		//two for, think another better way
+		//from the two vectors of ip to set json neighbor
+		set_json_neighbor_from_two_as(vupdata_source, vneighbor_ip,
+				neighbor, a, if_realconn, susedips, vAsInfo);
+		
+	}
+	// miss conneciton, make a new one
+	if(!if_realconn)
+	{
+		//add a new connection from other ips
+		add_extra_conn(sotherips, susedips, neighbor,
+				vAsInfo, a.as, a.asneighbor);
+	}
+}
 //output json
 void output_json(const std::string &filename,
 		const set<AsConn> &sasconn,
@@ -323,38 +350,14 @@ void output_json(const std::string &filename,
 		//the as is first accured
 		if(susedasnum.find(a->as) == susedasnum.end())
 		{
-			//weather the two as is connceted 
-			int if_realconn=0;
 			Json::Value item;
-
 			Json::Value neighbors;  //neighbors should append continusly
 			Json::Value neighbor;
-			vector<AsIps> vupdata_source, vneighbor_ip;
+			//set_json_neighbor_changed_ip
+			set_json_neighbor_ip(vAsInfo, *a, susedips, sotherips, neighbor);
 			
-			get_as_ips(a->as, vupdata_source, vAsInfo);
-			get_as_ips(a->asneighbor, vneighbor_ip, vAsInfo);
-			//the two as's ip's size is not null
-			if(vupdata_source.size() && vneighbor_ip.size())
-			{
-				//two for, think another better way
-				//from the two vectors of ip to set json neighbor
-				set_json_neighbor_from_two_as(vupdata_source, vneighbor_ip,
-						neighbor, *a, if_realconn, susedips, vAsInfo);
-				if(if_realconn)
-				{
-					neighbors.append(neighbor);
-					item["neighbors"] = neighbors;
-				}
-			}
-			// miss conneciton, make a new one
-			if(!if_realconn)
-			{
-				//add a new connection from other ips
-				add_extar_conn(sotherips, susedips, neighbor,
-						vAsInfo, a->as, a->asneighbor);
-				neighbors.append(neighbor);
-				item["neighbors"] = neighbors;
-			}
+			neighbors.append(neighbor);
+			item["neighbors"] = neighbors;
 				
 			//set basic json info
 			set_basic_json(item, a->as, sotherips);
@@ -364,42 +367,16 @@ void output_json(const std::string &filename,
 		}
 		else
 		{
-			int if_realconn=0;
-
-			int json_size = server.size();
-			for(int i =0; i < json_size; i++)
+			for(int i =0; i < server.size(); i++)
 			{
-				Json::Value neighbor;
-				
-				string sastemp = tostring(a->as);
-				if(server[i]["as_name"] == sastemp)
+				if(server[i]["as_name"] == tostring(a->as))
 				{
-					vector<AsIps> vupdata_source, vneighbor_ip;
-					
-					get_as_ips(a->as, vupdata_source, vAsInfo);
-					get_as_ips(a->asneighbor, vneighbor_ip, vAsInfo);
-					if(vupdata_source.size() && vneighbor_ip.size())
-					{
-						//two for, think another better way
-						//from the two vectors of ip to set json neighbor
-						set_json_neighbor_from_two_as(vupdata_source, 
-								vneighbor_ip, neighbor,
-								*a, if_realconn, susedips, vAsInfo);
-						if(if_realconn)
-						{
-							server[i]["neighbors"].append(neighbor);
-						}
-						
-					}
-					//miss as conn, make a new one
-					if(!if_realconn)
-					{
-						//add a new connection from other ips
-						add_extar_conn(sotherips, susedips, neighbor,
-								vAsInfo, a->as, a->asneighbor);
-						server[i]["neighbors"].append(neighbor);
-					}
-					//end if : ==
+					//set_json_neighbor_changed_ip
+					Json::Value neighbor;
+					set_json_neighbor_ip(vAsInfo, *a, susedips, sotherips,
+							neighbor);
+
+					server[i]["neighbors"].append(neighbor);
 					break;
 				}
 			}
