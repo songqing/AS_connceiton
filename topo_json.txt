@@ -1,0 +1,238 @@
+{
+    "server": [
+        {
+            "server_name": "route_65501",
+            "server_id": "",
+            "image": "0bfed3a7-a19a-4bb9-949e-d2eee0108d81",
+            "zone": "nova",
+            "type": "drt",
+            "flavorref": "10",
+            "as_name": "65501",
+            "timer": {
+                "holdtime": 30,
+                "keeplive": 10
+            },
+            "neighbors": [
+                {
+                    "neighbor_ip": "10.0.4.13",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65505,
+                    "update_source": "10.0.4.12"
+                },
+                {
+                    "neighbor_ip": "10.0.1.13",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65503,
+                    "update_source": "10.0.1.12"
+                },
+                {
+                    "neighbor_ip": "10.0.2.13",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65502,
+                    "update_source": "10.0.2.12"
+                },
+                {
+                    "neighbor_ip": "10.0.3.13",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65504,
+                    "update_source": "10.0.3.12"
+                }
+            ],
+            "networks": [
+                {
+                    "cidr": "192.168.1.0/24",
+                    "ip": "192.168.1.3"
+                }
+            ]
+        },
+        {
+            "server_name": "route_65502",
+            "server_id": "",
+            "image": "0bfed3a7-a19a-4bb9-949e-d2eee0108d81",
+            "zone": "nova",
+            "type": "drt",
+            "flavorref": "10",
+            "as_name": "65502",
+            "timer": {
+                "holdtime": 30,
+                "keeplive": 10
+            },
+            "neighbors": [
+                {
+                    "neighbor_ip": "10.0.6.12",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65504,
+                    "update_source": "10.0.6.11"
+                },
+                {
+                    "neighbor_ip": "10.0.2.12",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65501,
+                    "update_source": "10.0.2.13"
+                },
+                {
+                    "neighbor_ip": "10.0.5.12",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65503,
+                    "update_source": "10.0.5.11"
+                }
+            ],
+            "networks": [
+                {
+                    "cidr": "192.168.2.0/24",
+                    "ip": "192.168.2.3"
+                }
+            ]
+        },
+        {
+            "server_name": "route_65503",
+            "server_id": "",
+            "image": "0bfed3a7-a19a-4bb9-949e-d2eee0108d81",
+            "zone": "nova",
+            "type": "drt",
+            "flavorref": "10",
+            "as_name": "65503",
+            "timer": {
+                "holdtime": 30,
+                "keeplive": 10
+            },
+            "neighbors": [
+                {
+                    "neighbor_ip": "10.0.1.12",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65501,
+                    "update_source": "10.0.1.13"
+                },
+                {
+                    "neighbor_ip": "10.0.5.11",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65502,
+                    "update_source": "10.0.5.12"
+                },
+                {
+                    "neighbor_ip": "10.0.7.11",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65504,
+                    "update_source": "10.0.7.10"
+                }
+            ],
+            "networks": [
+                {
+                    "cidr": "192.168.3.0/24",
+                    "ip": "192.168.3.3"
+                }
+            ]
+        },
+        {
+            "server_name": "route_65504",
+            "server_id": "",
+            "image": "0bfed3a7-a19a-4bb9-949e-d2eee0108d81",
+            "zone": "nova",
+            "type": "drt",
+            "flavorref": "10",
+            "as_name": "65504",
+            "timer": {
+                "holdtime": 30,
+                "keeplive": 10
+            },
+            "neighbors": [
+                {
+                    "neighbor_ip": "10.0.3.12",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65501,
+                    "update_source": "10.0.3.13"
+                },
+                {
+                    "neighbor_ip": "10.0.7.10",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65503,
+                    "update_source": "10.0.7.11"
+                },
+                {
+                    "neighbor_ip": "10.0.6.11",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65502,
+                    "update_source": "10.0.6.12"
+                },
+                {
+                    "neighbor_ip": "10.0.8.12",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65506,
+                    "update_source": "10.0.8.11"
+                }
+            ],
+            "networks": [
+                {
+                    "cidr": "192.168.4.0/24",
+                    "ip": "192.168.4.3"
+                }
+            ]
+        },
+        {
+            "server_name": "route_65505",
+            "server_id": "",
+            "image": "0bfed3a7-a19a-4bb9-949e-d2eee0108d81",
+            "zone": "nova",
+            "type": "drt",
+            "flavorref": "10",
+            "as_name": "65505",
+            "timer": {
+                "holdtime": 30,
+                "keeplive": 10
+            },
+            "neighbors": [
+                {
+                    "neighbor_ip": "10.0.4.12",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65501,
+                    "update_source": "10.0.4.13"
+                },
+                {
+                    "neighbor_ip": "10.0.9.12",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65506,
+                    "update_source": "10.0.9.11"
+                }
+            ],
+            "networks": [
+                {
+                    "cidr": "192.168.5.0/24",
+                    "ip": "192.168.5.3"
+                }
+            ]
+        },
+        {
+            "server_name": "route_65506",
+            "server_id": "",
+            "image": "0bfed3a7-a19a-4bb9-949e-d2eee0108d81",
+            "zone": "nova",
+            "type": "drt",
+            "flavorref": "10",
+            "as_name": "65506",
+            "timer": {
+                "holdtime": 30,
+                "keeplive": 10
+            },
+            "neighbors": [
+                {
+                    "neighbor_ip": "10.0.8.11",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65504,
+                    "update_source": "10.0.8.12"
+                },
+                {
+                    "neighbor_ip": "10.0.9.11",
+                    "ebgp_multihop": 5,
+                    "remote_as": 65505,
+                    "update_source": "10.0.9.12"
+                }
+            ],
+            "networks": [
+                {
+                    "cidr": "192.168.6.0/24",
+                    "ip": "192.168.6.3"
+                }
+            ]
+        }
+    ]
+}
